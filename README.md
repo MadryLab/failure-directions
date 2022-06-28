@@ -20,7 +20,7 @@ train_svms.py: use our framework given a base file
 python ffcv_main.py -c dataset_configs/cifar.yaml --indices-file index_files/cifar_0.25_with_unlabeled.pt --exp-name cifar_model
 ```
 
-Speciically, ffcv_main.py in the following arguments. 
+Specifically, ffcv_main.py has the following arguments.  
 ```
 ffcv_main.py
 -c               A config from (c.f dataset_configs) which contains dataset and training argument information.
