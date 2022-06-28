@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for RATE in 92 84 76 68 60 52
+do
+	mv cmnist_0p$RATE cmnist_0p$RATE.yaml
+done

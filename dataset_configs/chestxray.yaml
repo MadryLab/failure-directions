@@ -1,0 +1,35 @@
+mean: [123.675, 116.28, 103.53] 
+std: [58.395, 57.12, 57.375] 
+num_classes: 14
+arch: 'resnet18'
+arch_type: 'resnet'
+
+batch_size: 1024
+num_workers: 10
+imgsz: 224
+
+train_beton: 'chestxray/chestxray_train.beton'
+test_beton: 'chestxray/chestxray_test.beton'
+val_beton: 'chestxray/chestxray_val.beton'
+
+
+train_img_decoder: center_crop_256
+val_img_decoder: center_crop_256
+
+shuffle: True
+drop_last: True
+
+train_aug: imagenet_train_aug
+
+bce: True
+
+training:
+    epochs: 16
+    lr: 0.5
+    optimizer:
+        momentum: 0.9
+        weight_decay: 5.0E-4
+    lr_scheduler:
+        type: cyclic
+        lr_peak_epoch: 2
+        

@@ -1,0 +1,42 @@
+num_classes: 2
+arch: 'resnet18'
+arch_type: 'cifar_resnet'
+
+batch_size: 512
+num_workers: 1
+imgsz: 28
+
+cmnist: True
+unlabeled: True 
+mnist_root: '/home/gridsan/hanlaw/data/'
+
+train_beton: 'ignore'
+test_beton: 'ignore'
+
+train_noise: 0.25
+val_noise: 0
+train_corr: 0.32
+val_corr: 0.5
+
+val_split: 5 # 20%
+unlabeled_split: 2 # 50% unlabeled
+numpy_seed: 10
+
+# put in here since not doing with index files
+
+train_img_decoder: simple
+val_img_decoder: simple
+
+shuffle: True
+
+training:
+    epochs: 15
+    lr: 0.1
+    optimizer:
+        momentum: 0.9
+        weight_decay: 5.0E-4
+    lr_scheduler:
+        type: cyclic
+        lr_peak_epoch: 2
+
+

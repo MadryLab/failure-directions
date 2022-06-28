@@ -1,0 +1,31 @@
+mean: [125.307, 122.961, 113.8575]
+std: [51.5865, 50.847, 51.255]
+num_classes: 10
+arch: 'resnet18'
+arch_type: 'cifar_resnet'
+
+batch_size: 512
+num_workers: 1
+imgsz: 32
+
+train_beton: 'cifar/cifar_train.beton'
+test_beton: 'cifar/cifar_test.beton'
+
+train_img_decoder: simple
+val_img_decoder: simple
+
+shuffle: True
+drop_last: True
+
+train_aug: cifar_train_aug
+
+training:
+    epochs: 35
+    lr: 0.5
+    optimizer:
+        momentum: 0.9
+        weight_decay: 5.0E-4
+    lr_scheduler:
+        type: cyclic
+        lr_peak_epoch: 5
+    

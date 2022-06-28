@@ -1,0 +1,6 @@
+#!/bin/bash
+
+for RATE in 08 16 24 32 40 48
+do
+	cp cmnist_0p$RATE.yaml cmnist_unlabeled_0p$RATE.yaml
+done
