@@ -1,5 +1,5 @@
 # Distilling Model Failures as Directions in Latent Space
-Here we provide the code for our paper: **Distilling Model Failures as Directions in Latent Space**
+Here we provide the code for our paper: **[Distilling Model Failures as Directions in Latent Space](https://arxiv.org/abs/2206.14754)**
 
 <p>
 <img src="corr_errs_pic.jpg" width="700" >
