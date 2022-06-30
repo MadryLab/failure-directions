@@ -67,10 +67,10 @@ clip_utils.py: clip utilities for automatic captioning
 To cite this paper, please use the following BibTeX entry:
 ```
 @inproceedings{jain2022distilling,
-title = {Distilling Model Failures as Directions in Latent Space},
-author = {Saachi Jain and Hannah Lawrence and Ankur Moitra and Aleksander Madry}, 
-booktitle = {ArXiv prepring arXiv:2206.14754},
-year = {2022}
+   title = {Distilling Model Failures as Directions in Latent Space},
+   author = {Saachi Jain and Hannah Lawrence and Ankur Moitra and Aleksander Madry}, 
+   booktitle = {ArXiv preprint arXiv:2206.14754},
+   year = {2022}
 }
 ```
 
