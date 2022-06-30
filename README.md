@@ -63,6 +63,17 @@ visualization_utils.py: utiities for visualizing the most extreme images surface
 clip_utils.py: clip utilities for automatic captioning
 ```
 
+## Citation
+To cite this paper, please use the following BibTeX entry:
+```
+@inproceedings{jain2022distilling,
+title = {Distilling Model Failures as Directions in Latent Space},
+author = {Saachi Jain and Hannah Lawrence and Ankur Moitra and Aleksander Madry}, 
+booktitle = {ArXiv prepring arXiv:2206.14754},
+year = {2022}
+}
+```
+
 ## Maintainers
 [Saachi Jain](https://twitter.com/saachi_jain_)<br>
 [Hannah Lawrence](https://twitter.com/HLawrenceCS)
