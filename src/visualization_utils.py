@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from src.label_maps import CLASS_DICT
 import src.model_utils as model_utils
 import src.svm_utils as svm_utils
+from wrappers import SVMFitter, CLIPProcessor
 
 def convert_to_numpy(d):
     for k in d.keys():
@@ -28,7 +29,8 @@ def convert_to_numpy(d):
 
 class SVMProcessor:
     def __init__(self, svm_filename, root="/mnt/cfs/projects/correlated_errors/betons", get_unlabeled=False,
-                 checkpoint_path=None, set_device=False, spurious=False, save_pred_probs=False):
+                 checkpoint_path=None, set_device=False, spurious=False, save_pred_probs=False,
+                ):
         self.get_unlabeled = get_unlabeled
         self.svm_filename = svm_filename
         self.metrics = self._load_svm_result(svm_filename)
@@ -57,21 +59,6 @@ class SVMProcessor:
         convert_to_numpy(self.run_dict)
         self.orders = self._get_orders()
         self.redo_svm = {}
-                    
-    def _redo_svm(self, svmname, num_classes=2):
-        import pickle
-        with open(svmname,'rb') as f:
-            out=pickle.load(f)
-        clfs = out
-
-        for name, ds in self.run_dict.items():
-            if name == 'test':
-                metric_dict = {}
-                print("=================", name, "=====================")
-                errors, metric = svm_utils.predict_per_class_svm(ds, num_classes, clfs)
-                metric_dict[f"{name}_metrics"] = metric
-                metric_dict[f"predicted_{name}_errors"] = 1 - errors # save 0 if correct, 1 otherwise
-                self.redo_svm[name] = metric_dict
     
     def _load_svm_result(self, filename):
         metrics = torch.load(filename)
@@ -210,3 +197,56 @@ class SVMProcessor:
                     dv_val = dv[ind]
                     confs_val = confs[ind]
                     self._display_images(taken_index=ind, taken_scores=dv_val, taken_confs=confs_val, split=split, rows=rows, columns=columns, filename=fname)
+                    
+class ClipAnalyzer:
+    def __init__(self, processor, svm_model_name, caption_set_name, skip_captions=False, legacy_load=True,
+                ):
+        self.processor = processor
+        if legacy_load:
+            self.svm_fitter = SVMFitter().legacy_import_model(svm_model_name, svm_stats=processor.metrics['stats'])
+        else:
+            self.svm_fitter = SVMFitter().import_model(svm_filename)
+        self.clip_processor = CLIPProcessor(ds_mean=processor.hparams['mean'], 
+                                            ds_std=processor.hparams['std'], 
+                                            arch='ViT-B/32', device='cuda')
+        self.clip_features = {
+            split: clip_processor.evaluate_clip_images(loader) for split, loader in processor.loaders.items()}
+        
+        self.test_class = processor.metrics[f'test_metrics']['classes']
+        # sanity check loading svm
+        mask_ = self.test_class == 0
+        lat_ = self.clip_features['test'][mask_]
+        ys_ = np.zeros(len(lat_))
+        ypred_ = processor.metrics[f'test_metrics']['ypred'][mask_]
+        print(
+            "consistent with old results",
+            (self.svm_fitter.predict(ys=ys_, latents=lats_) == ypred_).mean()
+        )
+        if not skip_captions:
+            self.captions = clip_utils.get_captions(caption_set_name)
+        
+    def get_svm_style_top_K(self, target_c, caption_type='all', K=10):
+        captions = self.captions[target_c][caption_type]
+        values, caption_latents = self.clip_processor.get_caption_scores(captions=captions, 
+                                               reference_caption=self.captions['reference'][target_c],
+                                               svm_fitter=self.svm_fitter,
+                                               target_c=target_c)
+        order = np.argsort(values) # lowest first
+        neg_captions = captions[order][:K]
+        neg_vals = values[order][:K]
+        neg_latents = caption_latents.numpy()[order][:K]
+        order = order[::-1]
+        pos_captions = captions[order][:K]
+        pos_vals = values[order][:K]
+        pos_latents = caption_latents.numpy()[order][:K]
+        result = {
+            'neg_captions': neg_captions,
+            'neg_latents': neg_latents,
+            'neg_vals': neg_vals,
+            'pos_captions': pos_captions,
+            'pos_latents': pos_latents,
+            'pos_vals': pos_vals,
+        }
+        pprint.pprint(result)
+        return result
+    

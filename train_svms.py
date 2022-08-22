@@ -11,6 +11,7 @@ from src.config_parsing import ffcv_read_check_override_config, svm_read_check_o
 from src.ffcv_utils import get_training_loaders
 import pprint
 import pickle as pkl
+from wrappers import SVMFitter, CLIPProcessor
 
 
 METHODS = ['SVM', 'MLP']
@@ -107,22 +108,22 @@ if __name__ == "__main__":
         print("using inception features")
         third_party_dict = {split: svm_utils.evaluate_inception_features(loader) for split, loader in loaders.items()}
     elif svm_hparams['embedding'] == 'clip':
+        clip_processor = CLIPProcessor(ds_mean=hparams['mean'], ds_std=hparams['std'], arch='ViT-B/32', device='cuda')
+        
         print("using clip features")
         third_party_dict = {
-            split: svm_utils.evaluate_clip_features(loader, hparams, set_device=set_device) for split, loader in loaders.items()}
+            split: clip_processor.evaluate_clip_images(loader) for split, loader in loaders.items()}
     else:
-        third_party_dict = {
-            split: out[split]['latents'] for split in out.keys()
-        }
+        third_party_dict = {split: out[split]['latents'] for split in out.keys()}
     
     # --------- PRE PROCESS --------------------
-    pre_process = svm_utils.SVMPreProcessing(do_normalize=svm_hparams['normalize'])
-    pre_process.update_stats(third_party_dict['train'])
-    metric_dict['stats'] = pre_process._export()
+    fit_args = svm_hparams['svm_args']
+    svm_fitter = SVMFitter(split_and_search=fit_args['split_and_search'], balanced=fit_args['balanced'],
+                           do_normalize=svm_hparams['normalize'], cv=fit_args['cv'])
+    svm_fitter.set_preprocess(third_party_dict['train'])
+    metric_dict['stats'] = svm_fitter.pre_process._export()
     with torch.no_grad():
-        third_party_dict = {
-            k: pre_process(v) for k, v in third_party_dict.items()
-        }
+        third_party_dict = {k: svm_fitter.pre_process(v) for k, v in third_party_dict.items()}
     for k in out_dict.keys():
         out_dict[k]['latents'] = third_party_dict[k]
         
@@ -134,27 +135,21 @@ if __name__ == "__main__":
 
     # --------- TRAIN SVM --------------------
     val_out = out_dict['val']
-    if svm_hparams['method'] == 'SVM':
-        fit_args = svm_hparams['svm_args']
-        clfs, cv_scores = svm_utils.train_per_class_svm(val_out, num_classes,
-                                                        split_and_search=fit_args['split_and_search'], 
-                                                        balanced=fit_args['balanced'])
-        metric_dict['cv_scores'] = cv_scores
-        for name, ds in out_dict.items():
-            print("=================", name, "=====================")
-            errors, metric = svm_utils.predict_per_class_svm(ds, num_classes, clfs)
-            metric_dict[f"{name}_metrics"] = metric
-            metric_dict[f"predicted_{name}_errors"] = 1 - errors # save 0 if correct, 1 otherwise
-            
-        with open(f"{args.out_file}_model.pkl", 'wb') as f:
-            pkl.dump(clfs, f)
-    elif svm_hparams['method'] == 'MLP':
-        mlp_model = svm_utils.train_mlp(num_classes, val_out, lr=args.mlp_lr, per_class=args.per_class)
-        print("=========== VAL =======")
-        for name, ds in out_dict.items():
-            errors, metric = svm_utils.evaluate_mlp_model(ds, mlp_model, num_classes, per_class=args.per_class)
-            metric_dict[f"{name}_metrics"] = metric
-            metric_dict[f"predicted_{name}_errors"] = 1 - errors # save 0 if correct, 1 otherwise
-    else:
-        raise NotImplemented()
+    fit_args = svm_hparams['svm_args']
+    cv_scores = svm_fitter.fit(latents=out['latents'], ys=out['ys'], preds=out['preds'])
+    metric_dict['cv_scores'] = cv_scores
+    for name, ds in out_dict.items():
+        print("=================", name, "=====================")
+        potential_keys = ['spuriouses', 'indices']
+        aux_info = {ds[k] for k in potential_keys if k in ds}
+        errors, decision, metric = svm_fitter.predict(latents=out['latents'], 
+                                            ys=out['ys'],
+                                            preds=out['preds'], 
+                                            aux_info=aux_info,
+                                            compute_metrics=True,
+                                            verbose=True,
+                                           )
+        metric_dict[f"{name}_metrics"] = metric
+        metric_dict[f"predicted_{name}_errors"] = 1 - errors # save 0 if correct, 1 otherwise
+    svm_fitter.export(f"{args.out_file}_model.pkl")
     torch.save(metric_dict, f"{args.out_file}.pt")

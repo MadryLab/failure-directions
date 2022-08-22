@@ -81,10 +81,6 @@ def get_imagenet_config():
         
 IMAGENET_CLIP_CONFIG = get_imagenet_config()
 
-
-ADJECTIVES =  [None, 'white', 'blue', 'red', 'green', 'black', 'yellow', 'orange', 'brown']
-DESCRIPTORS = ['group of', 'close-up', 'blurry', 'far away']
-BACKGROUNDS =  [None, 'outside', 'inside', 'on a black background', 'on a white background', 'on a green background', 'on a blue background', 'on a brown background']
 CIFAR_CLIP_CONFIG = {
     'synset': {
         'dog': 'dog.n.01',
@@ -188,42 +184,9 @@ CONFIG_MAPPING = {
 }
 
 
-
-import json
-with open("src/imagenet_class_index.json", 'r') as f:
-    imagenet_cls_idx = json.load(f)
-
-def normalize_embeddings(a):
-    return a/torch.linalg.norm(a, dim=1, keepdims=True)
-
-def cosine_distance(a, b):
-    a_norm = normalize_embeddings(a)
-    b_norm = normalize_embeddings(b)
-    return a_norm @ b_norm.T
-
-def order_descriptions_l2(clip_data, text_data):
-    clip_mean = clip_data.mean(dim=0).unsqueeze(0)
-    l2 = torch.linalg.norm(clip_mean - text_data, dim=1).cpu().numpy()
-    return l2
-
-# def order_descriptions_angle(clip_data, text_data):
-#     clip_mean = clip_data.mean(dim=0).unsqueeze(0)
-#     out = cosine_distance(clip_mean, text_data).squeeze(0).cpu().numpy()
-#     return out
-
-def order_descriptions_angle(mean_point, query_points):
-    clip_mean = mean_point.mean(dim=0).unsqueeze(0)
-    out = cosine_distance(clip_mean, query_points).squeeze(0).cpu().numpy()
-    return out
-
-def order_descriptions_svm(clip_data, text_data, c):
-    return clf[c].decision_function(text_data.numpy())
-
-
 class CaptionGenerator:
-    def __init__(self, label_list, clip_config, method_type="WordNet", exclude_common=True):
+    def __init__(self, label_list, clip_config):
         self.vocab = set([w.lower() for w in words.words()])
-        self.exclude_common = exclude_common
         self.method_type = method_type
         self.clip_config = clip_config
         self.label_list = label_list
@@ -243,43 +206,24 @@ class CaptionGenerator:
             full_set = full_set.union(self._get_all_hyponyms_base(wn.synset(s)))
         return full_set
 
-    def get_imagenet_set(self, synset_name):
-        all_words = []
-        for base_name in synset_name:
-            base_synset = wn.synset(base_name)
-            all_words.append(base_synset)
-            for i in range(1000):
-                syn1 = imagenet_cls_idx[str(i)][0]
-                num1 = int(syn1.split('n')[1])
-                wn1 = wn.synset_from_pos_and_offset('n',num1)
-                parent = wn1.lowest_common_hypernyms(base_synset)
-                if base_synset in parent:
-                    all_words.append(wn1)
-        return all_words
-
-
     def get_all_hyponyms(self, synset_name):
         if not isinstance(synset_name, list):
             synset_name = [synset_name]
-        if self.method_type == 'ImageNet':
-            full_set = self.get_imagenet_set(synset_name)
-        else:
-            full_set = self.get_wordnet_set(synset_name)
+        full_set = self.get_wordnet_set(synset_name)
         output = set([])
         for s in full_set:
             lemma = s.lemmas()[0]
             name = ' '.join(lemma.name().lower().split('_'))
-            if self.exclude_common:
-                if not s.name().endswith('n.01'):
-                    continue
-                exclude = False
-                if name not in self.vocab:
-                    for sub in name.split(' '):
-                        if sub not in self.vocab:
-                            print("excluding", name)
-                            exclude = True
-                if exclude:
-                    continue
+            if not s.name().endswith('n.01'):
+                continue
+            exclude = False
+            if name not in self.vocab:
+                for sub in name.split(' '):
+                    if sub not in self.vocab:
+                        print("excluding", name)
+                        exclude = True
+            if exclude:
+                continue
             output.add(name)
         return output
     
@@ -308,8 +252,8 @@ class CaptionGenerator:
                 for p in prepositions:
                     ending = ' '.join([u for u in [a, c, p] if u != None])
                     class_level_captions.append(f'a photo of a {ending}')
-        text_data = torch.tensor(svm_utils.evaluate_clip_text(class_level_captions))
-        return class_level_captions, text_data
+#         text_data = torch.tensor(svm_utils.evaluate_clip_text(class_level_captions))
+        return class_level_captions
     
     def get_captions(self):
         adjectives, prepositions = self.clip_config['adjectives'], self.clip_config['prepositions']
@@ -336,103 +280,25 @@ class CaptionGenerator:
                 caption_maps[k] = text_datas
         return caption_maps
     
-    
-
-class ClipAnalyzer:
-    def __init__(self, processor, svm_model_name, class_names, clip_config_name,
-                 do_normalize=True, exclude_common=True, method_type='WordNet',
-                 skip_captions=False,
-                ):
-        self.class_names = class_names
-        self.clip_config = CONFIG_MAPPING[clip_config_name]
-        self.processor = processor
-        self.label_list = class_names
-        self.clip_features = {
-            split: svm_utils.evaluate_clip_features(loader, processor.hparams) for split, loader in processor.loaders.items()
-        }
-
-        with open(svm_model_name, "rb") as f:
-            self.svm_models = pkl.load(f)
-            svm_stats = processor.metrics['stats']
-        self.svm_pre_process = svm_utils.SVMPreProcessing(mean=svm_stats['mean'], std=svm_stats['std'], do_normalize=do_normalize)
-        self.preprocessed_clip_features = {
-            k: self.svm_pre_process(v) for k, v in self.clip_features.items()
-        }
-        
-        
-        self.test_class = processor.metrics[f'test_metrics']['classes']
-        # sanity check loading svm
-        test_pred_correct = processor.metrics[f'test_metrics']['ypred']
-        mask = self.test_class == 0
-        print(
-            "consistent with old results",
-            (self.svm_models[0].predict(self.preprocessed_clip_features['test'][mask].numpy()) == test_pred_correct[mask]).mean()
-        )
-        if not skip_captions:
-            self.caption_maps = CaptionGenerator(
-                label_list=class_names, clip_config=self.clip_config, 
-                method_type=method_type, exclude_common=exclude_common).get_captions()
-        
-    def perform_closest_to_top_K(self, target_c, caption_type='all', K=10, group_size=100):
-        target_class = self.label_list[target_c]
-        print(target_class)
-        get_err = False
-        svm_order = self.processor.orders['test']['SVM'][get_err][target_c]
-        class_latents= self.clip_features['test'][svm_order]
-        captions, caption_latents = self.caption_maps[target_class][caption_type]
-        captions = np.array(captions)
-        caption_latents = caption_latents.cuda()
-        # negative
-        clip_data = class_latents[-group_size:].cuda()
-        angles = order_descriptions_angle(query_points=caption_latents, mean_point=clip_data)
-        order = np.argsort(angles)[::-1]
-        neg_captions = captions[order][:K]
-        neg_vals = angles[order][:K]
-        neg_latents = caption_latents.cpu().numpy()[order][:K]
-        # positive
-        clip_data = class_latents[:group_size].cuda()
-        angles = order_descriptions_angle(query_points=caption_latents, mean_point=clip_data)
-        order = np.argsort(angles)[::-1]
-        pos_captions = captions[order][:K]
-        pos_vals = angles[order][:K]
-        pos_latents = caption_latents.cpu().numpy()[order][:K]
-        
-        result = {
-            'neg_captions': neg_captions,
-            'neg_latents': neg_latents,
-            'neg_vals': neg_vals,
-            'pos_captions': pos_captions,
-            'pos_latents': pos_latents,
-            'pos_vals': pos_vals,
-        }
-        pprint.pprint(result)
-        return result
-        
-    def get_svm_style_top_K(self, target_c, caption_type='all', K=10):
-        target_class = self.class_names[target_c]
-        captions, caption_latents = self.caption_maps[target_class][caption_type]
-        captions = np.array(captions)
-        reference_caption, reference_latents = self.caption_maps['reference']
-        print(target_class, reference_caption[target_c])
-        preprocessed_caption = self.svm_pre_process(caption_latents.cpu() - reference_latents[target_c].cpu())
-        values = self.svm_models[target_c].decision_function(preprocessed_caption)
-        
-        order = np.argsort(values) # lowest first
-        neg_captions = captions[order][:K]
-        neg_vals = values[order][:K]
-        neg_latents = caption_latents.numpy()[order][:K]
-        order = order[::-1]
-        pos_captions = captions[order][:K]
-        pos_vals = values[order][:K]
-        pos_latents = caption_latents.numpy()[order][:K]
-        result = {
-            'neg_captions': neg_captions,
-            'neg_latents': neg_latents,
-            'neg_vals': neg_vals,
-            'pos_captions': pos_captions,
-            'pos_latents': pos_latents,
-            'pos_vals': pos_vals,
-        }
-        pprint.pprint(result)
-        return result
+def get_caption_set(caption_set_name):
+    assert caption_set_name in ['IMAGENET', "CIFAR", 'CELEBA']
+    if caption_set_name == 'CELEBA':
+        return CaptionGenerator(label_list=['person', 'person'], clip_config=CONFIG_MAPPING['CELEBA']).get_captions()
+    elif caption_set_name == 'CIFAR':
+        cifar_label_list = np.array([CLASS_DICT['CIFAR'][u] for u in range(10)])
+        return CaptionGenerator(label_list=cifar_label_list, clip_config=CONFIG_MAPPING['CIFAR10']).get_captions()
+    elif caption_set_name == 'CIFAR100':
+        singular_class_names = ['aquatic mammal', 'fish', 'flower', 'food container', 
+                                'fruit or vegetable', 'household electrical device', 
+                                'household furniture', 'insect', 'large carnivore', 
+                                'large man-made outdoor thing', 'large natural outdoor scene', 
+                                'large omnivores and herbivore', 'medium-sized mammal', 
+                                'non-insect invertebrate', 'person', 'reptile', 'small mammal', 
+                                'tree', 'standard vehicle', 'specialized vehicle']
+        return CaptionGenerator(label_list=singular_class_names, clip_config=CONFIG_MAPPING['CIFAR100']).get_captions()
+    elif caption_set_name == 'IMAGENET':
+        imagenet_label_list = np.array([CLASS_DICT['ImageNet'][u].split(',')[0] for u in range(1000)])
+        return CaptionGenerator(label_list=imagenet_label_list, clip_config=CONFIG_MAPPING['IMAGENET']).get_captions()
+    else:
+        assert False, "caption_set not found"
     
