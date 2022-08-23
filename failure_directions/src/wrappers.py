@@ -2,15 +2,21 @@ import sys
 import os
 import yaml
 import torch
-import src.svm_utils as svm_utils
 import argparse
 import numpy as np
-from src import model_utils
-import src.trainer as trainer_utils
-from src.config_parsing import ffcv_read_check_override_config, svm_read_check_override_config
-from src.ffcv_utils import get_training_loaders
 import pprint
 import pickle as pkl
+import clip
+import torchvision.transforms as transforms
+from torch.cuda.amp import autocast
+from tqdm import tqdm
+import failure_directions.src.svm_utils as svm_utils
+from failure_directions.src import model_utils
+import failure_directions.src.trainer as trainer_utils
+from failure_directions.src.config_parsing import ffcv_read_check_override_config, svm_read_check_override_config
+from failure_directions.src.ffcv_utils import get_training_loaders
+import failure_directions.src.ffcv_utils as ffcv_utils
+
 
 class SVMFitter:
     def __init__(self, split_and_search=True, balanced=True, cv=2, do_normalize=True):
@@ -26,18 +32,21 @@ class SVMFitter:
         self.pre_process.update_stats(train_latents)
         
     def fit(self, preds, ys, latents):
-        assert self.pre_process is not None, 'run set_preprocess on a training set first)
-        latents = self.pre_process(latents)
-        clfs, cv_scores = svm_utils.train_per_class_svm(latents=latents, ys=ys, preds=preds, 
-                                                   balanced=self.balanced, 
-                                                   split_and_search=self.split_and_search,
-                                                   cv=self.cv)
+        assert self.pre_process is not None, 'run set_preprocess on a training set first'
+        latents = self.pre_process(latents).numpy()
+        clfs, cv_scores = svm_utils.train_per_class_svm(latents=latents, ys=ys.numpy(), 
+                                                        preds=preds.numpy(), balanced=self.balanced, 
+                                                        split_and_search=self.split_and_search,
+                                                        cv=self.cv)
         self.clfs = clfs
         return cv_scores
     
     def predict(self, ys, latents, compute_metrics=True, preds=None, aux_info={}, verbose=True):
         assert self.clfs is not None, "must call fit first"
-        latents = self.pre_process(latents)
+        latents = self.pre_process(latents).numpy()
+        ys = ys.numpy()
+        if preds is not None:
+            preds = preds.numpy()
         return svm_utils.predict_per_class_svm(latents=latents, ys=ys, clfs=self.clfs, 
                                      preds=preds, aux_info=aux_info,
                                      verbose=verbose, compute_metrics=compute_metrics)
@@ -77,8 +86,6 @@ class SVMFitter:
         
         
                 
-        
-
 class CLIPProcessor:
     def __init__(self, ds_mean=0, ds_std=1, 
                  arch='ViT-B/32', device='cuda'):
@@ -88,7 +95,7 @@ class CLIPProcessor:
         self.preprocess_clip = transforms.Compose(
             [
                 ffcv_utils.inv_norm(ds_mean, ds_std),
-                torchvision.transforms.Resize((224, 224)),
+                transforms.Resize((224, 224)),
                 clip_normalize,
             ]
         )
@@ -114,14 +121,14 @@ class CLIPProcessor:
         with torch.no_grad():
             for batch in tqdm(dl):
                 caption = batch[0].cuda()
-                text_features = clip_model.encode_text(caption)
+                text_features = self.clip_model.encode_text(caption)
                 clip_activations.append(text_features.cpu())
         return torch.cat(clip_activations).float()
    
-    def get_caption_scores(captions, reference_caption, svm_fitter, target_c):
+    def get_caption_scores(self, captions, reference_caption, svm_fitter, target_c):
         caption_latent = self.evaluate_clip_captions(captions)
-        reference_latent = self.evaluate_clip_captions([reference])[0]
+        reference_latent = self.evaluate_clip_captions([reference_caption])[0]
         latent = caption_latent - reference_latent
         ys = (torch.ones(len(latent))*target_c).long()
-        _, decisions = svm_fitter.predict(ys=ys, latents=latent)
+        _, decisions = svm_fitter.predict(ys=ys, latents=latent, compute_metrics=False)
         return decisions, caption_latent

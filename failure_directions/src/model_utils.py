@@ -1,5 +1,5 @@
 import torch
-import src.cifar_resnet as cifar_resnet
+import failure_directions.src.cifar_resnet as cifar_resnet
 import torchvision.models as models
 import torch.nn as nn
 

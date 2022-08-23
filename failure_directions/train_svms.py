@@ -5,10 +5,10 @@ import torch
 import src.svm_utils as svm_utils
 import argparse
 import numpy as np
-from src import model_utils
-import src.trainer as trainer_utils
-from src.config_parsing import ffcv_read_check_override_config, svm_read_check_override_config
-from src.ffcv_utils import get_training_loaders
+from failure_directions.src import model_utils
+import failure_directions.src.trainer as trainer_utils
+from failure_directions.src.config_parsing import ffcv_read_check_override_config, svm_read_check_override_config
+from failure_directions.src.ffcv_utils import get_training_loaders
 import pprint
 import pickle as pkl
 from wrappers import SVMFitter, CLIPProcessor

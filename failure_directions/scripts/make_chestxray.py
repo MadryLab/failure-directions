@@ -3,16 +3,20 @@ import os
 from ffcv.writer import DatasetWriter
 from ffcv.fields import RGBImageField, IntField, NDArrayField
 import torch
-import src.pytorch_datasets as pytorch_datasets
-from src import ffcv_utils
 import yaml
-from src.config_parsing import ffcv_read_check_override_config
 import pprint
-from src.pytorch_datasets import IndexedDataset
 import numpy as np
 import sys
 import os
-sys.path.append('..')
+
+from failure_directions.src.config_parsing import ffcv_read_check_override_config
+from failure_directions.src.pytorch_datasets import IndexedDataset
+import failure_directions.src.pytorch_datasets as pytorch_datasets
+from failure_directions.src import ffcv_utils
+
+print("making chestxray")
+BETON_ROOT = "/mnt/cfs/home/saachij/betons"
+
 
 def get_unlabeled(name, initial_train_targets, num_classes, folds, first_val_split=5):
     # write subsets
@@ -24,7 +28,6 @@ def get_unlabeled(name, initial_train_targets, num_classes, folds, first_val_spl
             print(k, len(v))
         torch.save(result_indices, f'index_files/{name}_indices_{fold}.pt')
         
-BETON_ROOT = "/mnt/cfs/home/saachij/betons"
 
 def write_betons(ds_name, train_ds, test_ds, val_ds=None, max_resolution=None):
     os.makedirs(os.path.join(BETON_ROOT, ds_name), exist_ok=True)
@@ -51,8 +54,9 @@ def write_betons(ds_name, train_ds, test_ds, val_ds=None, max_resolution=None):
         # Write dataset
         writer.from_indexed_dataset(ds)
 
-root = "/mnt/nfs/datasets/ChestX-ray14"
-train_ds = pytorch_datasets.ChestXrayDataSet('train', root)
-test_ds = pytorch_datasets.ChestXrayDataSet('test', root)
-val_ds = pytorch_datasets.ChestXrayDataSet('val', root)
-write_betons('chestxray_new', train_ds, test_ds, val_ds=val_ds, max_resolution=224)
+if __name__ == "__main__":
+    root = "/mnt/nfs/datasets/ChestX-ray14"
+    train_ds = pytorch_datasets.ChestXrayDataSet('train', root)
+    test_ds = pytorch_datasets.ChestXrayDataSet('test', root)
+    val_ds = pytorch_datasets.ChestXrayDataSet('val', root)
+    write_betons('chestxray_new', train_ds, test_ds, val_ds=val_ds, max_resolution=224)

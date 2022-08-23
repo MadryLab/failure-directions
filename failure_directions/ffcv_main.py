@@ -1,16 +1,18 @@
 import argparse
 import yaml
-from src.config_parsing import ffcv_read_check_override_config
 import pprint
-from src.ffcv_utils import get_training_loaders
 from tqdm import tqdm
 import torch
 import numpy as np
 import os
-import src.model_utils as model_utils
-import src.trainer as trainer_utils
 from torch.cuda.amp import autocast
 import torchmetrics
+
+from failure_directions.src.config_parsing import ffcv_read_check_override_config
+from failure_directions.src.ffcv_utils import get_training_loaders
+import failure_directions.src.model_utils as model_utils
+import failure_directions.src.trainer as trainer_utils
+
 
 def evaluate_bce_model(loaded_model, loader, num_classes, set_device=False):
     sigmoid = torch.nn.Sigmoid()

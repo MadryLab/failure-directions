@@ -3,14 +3,18 @@ from nltk.corpus import wordnet
 from nltk.corpus import webtext, brown, gutenberg
 import nltk
 from nltk.corpus import wordnet as wn
-import src.svm_utils as svm_utils
 import tqdm
 import numpy as np
 import torch
 import pickle as pkl
 import pprint
-from src.label_maps import CLASS_DICT
 import json
+import failure_directions.src.svm_utils as svm_utils
+from failure_directions.src.label_maps import CLASS_DICT
+import importlib.resources
+import json
+
+
 
 ADJECTIVES =  [None, 'white', 'blue', 'red', 'green', 'black', 'yellow', 'orange', 'brown']
 DESCRIPTORS = ['group of', 'close-up', 'blurry', 'far away']
@@ -37,8 +41,10 @@ ANCESTOR_TO_PREPS = [
 ]
 
 def get_imagenet_config():
-    with open('src/imagenet_class_index.json', 'r') as f:
-        class_indices = json.load(f)
+    with importlib.resources.open_text("failure_directions.src", 'imagenet_class_index.json') as file:
+        class_indices = json.load(file)  
+#     with open('src/imagenet_class_index.json', 'r') as f:
+#         class_indices = json.load(f)
     synsets = {}
     for k, v in class_indices.items():
         ident = int(v[0][1:])
@@ -187,7 +193,6 @@ CONFIG_MAPPING = {
 class CaptionGenerator:
     def __init__(self, label_list, clip_config):
         self.vocab = set([w.lower() for w in words.words()])
-        self.method_type = method_type
         self.clip_config = clip_config
         self.label_list = label_list
         self.master_list = self.get_nouns()

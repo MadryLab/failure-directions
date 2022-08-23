@@ -2,23 +2,24 @@ import torch
 import os
 import numpy as np
 import torchvision
-import os
-from ffcv.writer import DatasetWriter
-from ffcv.fields import RGBImageField, IntField
-import torch
-import src.pytorch_datasets as pytorch_datasets
-from src import ffcv_utils
 import yaml
-from src.config_parsing import ffcv_read_check_override_config
 import pprint
-from src.ffcv_utils import get_training_loaders
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from src.label_maps import CLASS_DICT
-import src.model_utils as model_utils
-import src.svm_utils as svm_utils
-from wrappers import SVMFitter, CLIPProcessor
+
+from ffcv.writer import DatasetWriter
+from ffcv.fields import RGBImageField, IntField
+
+import failure_directions.src.pytorch_datasets as pytorch_datasets
+from failure_directions.src import ffcv_utils
+from failure_directions.src import ffcv_utils
+from failure_directions.src.config_parsing import ffcv_read_check_override_config
+from failure_directions.src.label_maps import CLASS_DICT
+import failure_directions.src.model_utils as model_utils
+import failure_directions.src.svm_utils as svm_utils
+from failure_directions.src.ffcv_utils import get_training_loaders
+from failure_directions.src.wrappers import SVMFitter, CLIPProcessor
 
 def convert_to_numpy(d):
     for k in d.keys():

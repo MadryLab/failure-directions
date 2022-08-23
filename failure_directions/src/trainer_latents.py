@@ -9,10 +9,10 @@ import torch.nn as nn
 
 from torch.utils.tensorboard import SummaryWriter
 from torch.cuda.amp import GradScaler, autocast
-from src.config_parsing import ffcv_read_check_override_config
-from src.model_utils import save_model, load_model, save_model_svm
-from src.ffcv_utils import get_training_loaders
-from src.optimizers import get_optimizer_and_lr_scheduler
+from failure_directions.src.config_parsing import ffcv_read_check_override_config
+from failure_directions.src.model_utils import save_model, load_model, save_model_svm
+from failure_directions.src.ffcv_utils import get_training_loaders
+from failure_directions.src.optimizers import get_optimizer_and_lr_scheduler
 
 
 

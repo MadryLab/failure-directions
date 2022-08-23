@@ -1,22 +1,21 @@
 import sys
 import os
-sys.path.append('..')
-import os
 import yaml
 import torch
-from src import svm_utils
 import argparse
 import numpy as np
-from src import model_utils
-from src import ffcv_utils
-import src.trainer as trainer_utils
-from src.config_parsing import ffcv_read_check_override_config
-from src.ffcv_utils import get_training_loaders
 import pprint
 import pickle as pkl
-from src import ae_utils
 from tqdm import tqdm
-from src.dist_shift_utils import MMD
+
+from failure_directions.src import model_utils
+from failure_directions.src import ffcv_utils
+import failure_directions.src.trainer as trainer_utils
+from failure_directions.src.config_parsing import ffcv_read_check_override_config
+from failure_directions.src.ffcv_utils import get_training_loaders
+from failure_directions.src import ae_utils
+from failure_directions.src import svm_utils
+from failure_directions.src.dist_shift_utils import MMD
 
 
 METHODS = ['SVM', 'MLP']

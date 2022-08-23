@@ -3,16 +3,16 @@ import os
 from ffcv.writer import DatasetWriter
 from ffcv.fields import RGBImageField, IntField
 import torch
-import src.pytorch_datasets as pytorch_datasets
-from src import ffcv_utils
 import yaml
-from src.config_parsing import ffcv_read_check_override_config
 import pprint
-from src.ffcv_utils import get_training_loaders
-from src.pytorch_datasets import create_val_split, get_unlabeled_indices, IndexedDataset
 import sys
-import os
-sys.path.append('..')
+from failure_directions.src import ffcv_utils
+import failure_directions.src.pytorch_datasets as pytorch_datasets
+from failure_directions.src.config_parsing import ffcv_read_check_override_config
+from failure_directions.src.ffcv_utils import get_training_loaders
+from failure_directions.src.pytorch_datasets import create_val_split, get_unlabeled_indices, IndexedDataset
+BETON_ROOT = "/home/gridsan/sajain/CorrErrs_shared/betons"
+
 
 def get_unlabeled(name, initial_train_targets, num_classes, folds, first_val_split=5):
     # write subsets
@@ -24,7 +24,6 @@ def get_unlabeled(name, initial_train_targets, num_classes, folds, first_val_spl
             print(k, len(v))
         torch.save(result_indices, f'index_files/{name}_indices_{fold}.pt')
         
-BETON_ROOT = "/home/gridsan/sajain/CorrErrs_shared/betons"
 
 def write_betons(ds_name, train_ds, test_ds, val_ds=None, max_resolution=None):
     os.makedirs(os.path.join(BETON_ROOT, ds_name), exist_ok=True)
@@ -50,7 +49,8 @@ def write_betons(ds_name, train_ds, test_ds, val_ds=None, max_resolution=None):
         # Write dataset
         writer.from_indexed_dataset(ds)
         
-train_ds = torchvision.datasets.ImageFolder("/home/gridsan/groups/datasets/ImageNet/train")
-test_ds = torchvision.datasets.ImageFolder("/home/gridsan/groups/datasets/ImageNet/val")
-write_betons('imagenet', train_ds, test_ds, val_ds=None, max_resolution=256)
+if __name__ == "__main__":
+    train_ds = torchvision.datasets.ImageFolder("/home/gridsan/groups/datasets/ImageNet/train")
+    test_ds = torchvision.datasets.ImageFolder("/home/gridsan/groups/datasets/ImageNet/val")
+    write_betons('imagenet', train_ds, test_ds, val_ds=None, max_resolution=256)
 

@@ -14,8 +14,8 @@ from sklearn.model_selection import cross_val_score
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
-import src.trainer as trainer_utils
-import src.ffcv_utils as ffcv_utils
+import failure_directions.src.trainer as trainer_utils
+import failure_directions.src.ffcv_utils as ffcv_utils
 import torch.nn as nn
 from torch.cuda.amp import autocast
 from pprint import pprint
@@ -260,7 +260,6 @@ def get_balanced_accuracy(ytrue, ypred):
 def fit_svc_svm(C, class_weight, x, gt, cv=2):
     scorer = sklearn_metrics.make_scorer(sklearn_metrics.balanced_accuracy_score)
     clf = SVC(gamma='auto', kernel='linear', C=C, class_weight=class_weight)
-    
     cv_scores = cross_val_score(clf, x, gt, cv=cv, scoring=scorer)
     cv_scores = np.mean(cv_scores)
     
@@ -272,7 +271,7 @@ def train_per_class_svm(latents, ys, preds, balanced=True, split_and_search=Fals
     # Then grid search over C = array([1.e-06, 1.e-05, 1.e-04, 1.e-03, 1.e-02, 1.e-01, 1.e+00])
     nc = ys.max() + 1
     class_weight = 'balanced' if balanced else None        
-    val_correct = (preds == yes).astype(int)
+    val_correct = (preds == ys).astype(int)
     val_latent = latents
     clfs, cv_scores = [], []
     for c in tqdm(range(nc)):
@@ -304,8 +303,8 @@ def predict_per_class_svm(latents, ys, clfs, preds=None, aux_info={}, verbose=Tr
         indiv_metrics = []
     
     for c in tqdm(range(len(clfs))): #replaced nc
-        mask = yes == c
-        if clfs[c] is not None:
+        mask = ys == c
+        if clfs[c] is not None and (len(mask[mask]) > 0):
             clf_out = clfs[c].predict(latents[mask])
             decision_out = clfs[c].decision_function(latents[mask])
             if compute_metrics:

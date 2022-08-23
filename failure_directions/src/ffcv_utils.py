@@ -16,9 +16,9 @@ from ffcv.pipeline.allocation_query import AllocationQuery
 from ffcv.pipeline.state import State
 import os
 
-from src.decoders_and_transforms import IMAGE_DECODERS, IMAGE_AUGS
-import src.pytorch_datasets as pytorch_datasets
-from src.pytorch_datasets import ColoredMNIST
+from failure_directions.src.decoders_and_transforms import IMAGE_DECODERS, IMAGE_AUGS
+import failure_directions.src.pytorch_datasets as pytorch_datasets
+from failure_directions.src.pytorch_datasets import ColoredMNIST
 
 if torch.cuda.is_available():
     DEVICE = torch.device('cuda')

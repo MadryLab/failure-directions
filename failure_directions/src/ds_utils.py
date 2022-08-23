@@ -2,8 +2,8 @@ import torch
 import numpy as np
 import src.ffcv_utils as ffcv_utils
 import torch
-import src.ffcv_utils as ffcv_utils
-from src.config_parsing import ffcv_read_check_override_config
+import failure_directions.src.ffcv_utils as ffcv_utils
+from failure_directions.src.config_parsing import ffcv_read_check_override_config
 import yaml
 import pprint
 import tqdm
