@@ -7,10 +7,9 @@ Here we provide the code for our paper: **[Distilling Model Failures as Directio
 
 ## Getting Started
 * **pip** package coming soon! stay tuned
+ 
+**Example:** For a walkthrough of using our method [Example notebook](https://github.com/MadryLab/failure-directions/blob/release/example/Example.ipynb)! This notebook walks through using our method on CIFAR-10. (to use the pre-trained model checkpoint, make sure to have [git LFS](https://git-lfs.github.com/) installed). Otherwise, you can train a new CIFAR-10 model using our code. 
 
-Clone the repository. Make sure that you have [git LFS](https://git-lfs.github.com/) installed
-
-**Example:** For a walkthrough of using our method [Example notebook](https://github.com/MadryLab/failure-directions/blob/release/example/Example.ipynb)! This notebook walks through using our method on CIFAR-10.
 
 The main methods for our analysis are contained in [wrappers.py](https://github.com/MadryLab/failure-directions/blob/release/failure_directions/src/wrappers.py). Specifically:
 ```
