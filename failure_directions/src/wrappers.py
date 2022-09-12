@@ -27,9 +27,13 @@ class SVMFitter:
         self.pre_process = None
         self.do_normalize = do_normalize
         
-    def set_preprocess(self, train_latents):
+    def set_preprocess(self, train_latents=None):
         self.pre_process = svm_utils.SVMPreProcessing(do_normalize=self.do_normalize)
-        self.pre_process.update_stats(train_latents)
+        if train_latents is not None:
+            print("updating whitening")
+            self.pre_process.update_stats(train_latents)
+        else:
+            print("No whitening")
         
     def fit(self, preds, ys, latents):
         assert self.pre_process is not None, 'run set_preprocess on a training set first'
