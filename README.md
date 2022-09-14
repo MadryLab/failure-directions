@@ -17,7 +17,7 @@ train_svms.py: use our framework given a base file
 `ffcv_main.py` is used to train the base model and the model after interventions. For example, for CIFAR10:
 
 ```
-python ffcv_main.py -c dataset_configs/cifar.yaml --indices-file index_files/cifar_0.25_with_unlabeled.pt --exp-name cifar_model
+python ffcv_main.py -c ../dataset_configs/cifar.yaml --indices-file ../index_files/cifar_0.25_with_unlabeled.pt --exp-name cifar_model
 ```
 
 Specifically, ffcv_main.py has the following arguments.  
@@ -38,7 +38,7 @@ ffcv_main.py
 To then run our framework on top of this model, use `train_svms.py`. For example:
 
 ```
-python train_svms.py -c dataset_configs/cifar.yaml -s svm_configs/normalized_svm_base_config.yaml --indices-file index_files/cifar_0.25_with_unlabeled.pt --model-path <model path here>  --out-file cifar_svm --unlabeled
+python train_svms.py -c ../dataset_configs/cifar.yaml -s ../svm_configs/normalized_svm_base_config.yaml --indices-file index_files/cifar_0.25_with_unlabeled.pt --model-path <model path here>  --out-file cifar_svm --unlabeled
 ```
 
 Specifically, `train_svms.py` has the following arguments.
