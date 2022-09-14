@@ -8,6 +8,8 @@ import os
 from torch.cuda.amp import autocast
 import torchmetrics
 
+import sys
+sys.path.append("..")
 from failure_directions.src.config_parsing import ffcv_read_check_override_config
 from failure_directions.src.ffcv_utils import get_training_loaders
 import failure_directions.src.model_utils as model_utils

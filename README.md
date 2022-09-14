@@ -6,6 +6,47 @@ Here we provide the code for our paper: **[Distilling Model Failures as Directio
 </p>
 
 ## Getting Started
+* **pip** package coming soon! stay tuned
+ 
+**Example:** For a walkthrough of using our method [Example notebook](https://github.com/MadryLab/failure-directions/blob/release/example/Example.ipynb)! This notebook walks through using our method on CIFAR-10. (to use the pre-trained model checkpoint, make sure to have [git LFS](https://git-lfs.github.com/) installed). Otherwise, you can train a new CIFAR-10 model using our code. 
+
+
+The main methods for our analysis are contained in [wrappers.py](https://github.com/MadryLab/failure-directions/blob/release/failure_directions/src/wrappers.py). Specifically:
+```
+SVMFitter: utility wrapper to fit the SVM
+CLIPProcessor: utility wrapper for CLIP operations
+```
+
+In order to fit the SVM and extract the corresponding direction, run (assuming `hparams` contains the mean and std) for the dataset:
+```
+import failure_directions
+# let hparams contain mean and std for dataset
+# let loaders contain a dict of train, test, val loaders.
+# let split_gts contain the ground truth labels for each split
+# let split_preds contain the predictions for each split
+
+# Load CLIP features
+clip_processor = failure_directions.CLIPProcessor(ds_mean=hparams['mean'], ds_std=hparams['std'])
+clip_features = {}
+for split, loader in loaders.items():
+    clip_features[split] = clip_processor.evaluate_clip_images(loader)
+    
+# Fit SVM
+svm_fitter = failure_directions.SVMFitter()
+svm_fitter.set_preprocess(clip_features['train'])
+cv_scores = svm_fitter.fit(preds=split_preds['val'], ys=split_gts['val'], latents=clip_features['val'])
+
+# Get SVM decision values
+svm_predictions = {}
+svm_decision_values = {}
+for split, loader in loaders.items():
+    mask, dv = svm_fitter.predict(ys=split_gts[split], latents=clip_features[split], compute_metrics=False)
+    svm_predictions[split] = mask
+    svm_decision_values[split] = dv
+```
+
+
+## Training models
 We use FFCV (https://ffcv.io/) to train our models. Dataset betons can be created using the notebooks in `setup_nbs`.
 
 There are two main scripts: 

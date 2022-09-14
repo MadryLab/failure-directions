@@ -1,0 +1,11 @@
+method: MLP # choose SVM, MLP
+embedding: clip # choose latent, clip, inception
+whiten: True # compute mean, std from training data, use to whiten
+normalize: True
+
+svm_args:
+    split_and_search: True
+    balanced: True
+    cv: 2
+    first_layer: False
+    
