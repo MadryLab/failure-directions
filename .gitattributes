@@ -1,1 +1,0 @@
-example/example_ckpt.pt filter=lfs diff=lfs merge=lfs -text
