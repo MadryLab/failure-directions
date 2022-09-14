@@ -2,6 +2,9 @@ import sys
 import os
 import yaml
 import torch
+import sys
+sys.path.append("..")
+
 import src.svm_utils as svm_utils
 import argparse
 import numpy as np
@@ -11,7 +14,7 @@ from failure_directions.src.config_parsing import ffcv_read_check_override_confi
 from failure_directions.src.ffcv_utils import get_training_loaders
 import pprint
 import pickle as pkl
-from wrappers import SVMFitter, CLIPProcessor
+from src.wrappers import SVMFitter, CLIPProcessor
 
 
 METHODS = ['SVM', 'MLP']
@@ -29,6 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('--bce', action='store_true', help='bce model')
     parser.add_argument('--bce-class', type=int, default=7)
     parser.add_argument('--spurious', action='store_true', help='If present, include spurious label in the pipeline (assume available in beton)')
+    parser.add_argument('--mlp-size', type=int, default=100)
     args = parser.parse_args()
     
     
@@ -118,8 +122,10 @@ if __name__ == "__main__":
     
     # --------- PRE PROCESS --------------------
     fit_args = svm_hparams['svm_args']
+    fit_args['hidden_layer_size'] = args.mlp_size
+
     svm_fitter = SVMFitter(split_and_search=fit_args['split_and_search'], balanced=fit_args['balanced'],
-                           do_normalize=svm_hparams['normalize'], cv=fit_args['cv'])
+                           do_normalize=svm_hparams['normalize'], cv=fit_args['cv'], method=svm_hparams['method'], svm_args=fit_args)
     svm_fitter.set_preprocess(third_party_dict['train'])
     metric_dict['stats'] = svm_fitter.pre_process._export()
     with torch.no_grad():
@@ -136,15 +142,20 @@ if __name__ == "__main__":
     # --------- TRAIN SVM --------------------
     val_out = out_dict['val']
     fit_args = svm_hparams['svm_args']
-    cv_scores = svm_fitter.fit(latents=out['latents'], ys=out['ys'], preds=out['preds'])
+    cv_scores = svm_fitter.fit(latents=val_out['latents'], ys=val_out['ys'], preds=val_out['preds'])
     metric_dict['cv_scores'] = cv_scores
     for name, ds in out_dict.items():
         print("=================", name, "=====================")
         potential_keys = ['spuriouses', 'indices']
-        aux_info = {ds[k] for k in potential_keys if k in ds}
-        errors, decision, metric = svm_fitter.predict(latents=out['latents'], 
-                                            ys=out['ys'],
-                                            preds=out['preds'], 
+
+        aux_info = {}
+        for k in potential_keys:
+            if k  in ds:
+                aux_info[k] = ds[k]
+        #aux_info = {ds[k] for k in potential_keys if k in ds} # causing an error
+        errors, decision, metric = svm_fitter.predict(latents=val_out['latents'], 
+                                            ys=val_out['ys'],
+                                            preds=val_out['preds'], 
                                             aux_info=aux_info,
                                             compute_metrics=True,
                                             verbose=True,

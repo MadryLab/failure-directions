@@ -24,6 +24,7 @@ from torch.utils.data import Dataset, DataLoader
 import clip
 import torchvision.transforms as transforms
 import torchmetrics
+import sklearn.neural_network
 
 class SVMPreProcessing(nn.Module):
     
@@ -34,16 +35,20 @@ class SVMPreProcessing(nn.Module):
         self.do_normalize = do_normalize
         
     def update_stats(self, latents):
+        latents = torch.tensor(latents)
         self.mean = latents.mean(dim=0)
         self.std = (latents - self.mean).std(dim=0)
     
     def normalize(self, latents):
+        latents = torch.tensor(latents)
         return latents/torch.linalg.norm(latents, dim=1, keepdims=True)
     
     def whiten(self, latents):
+        latents = torch.tensor(latents)
         return (latents - self.mean) / self.std
     
     def forward(self, latents):
+        latents = torch.tensor(latents)
         if self.mean is not None:
             latents = self.whiten(latents)
         if self.do_normalize:
@@ -262,9 +267,23 @@ def fit_svc_svm(C, class_weight, x, gt, cv=2):
     clf = SVC(gamma='auto', kernel='linear', C=C, class_weight=class_weight)
     cv_scores = cross_val_score(clf, x, gt, cv=cv, scoring=scorer)
     cv_scores = np.mean(cv_scores)
-    
     clf.fit(x, gt)
     return clf, cv_scores
+
+def fit_svc_mlp(x, gt, svm_args={}):
+    #scorer = sklearn_metrics.make_scorer(sklearn_metrics.balanced_accuracy_score)
+    
+    # make hidden layer based on feature dimension of x
+    # batch_size = first dimension
+    input_dim = x.shape[1]
+    hidden_layer_size = svm_args['hidden_layer_size']
+    if 'first_layer' in svm_args and not svm_args['first_layer']:
+        hidden_layer_sizes =(hidden_layer_size, )
+    else:
+        hidden_layer_sizes=(input_dim, hidden_layer_size, )
+    clf = sklearn.neural_network.MLPClassifier(hidden_layer_sizes=hidden_layer_sizes, max_iter=800)
+    clf.fit(x, gt)
+    return clf, 0 
 
 def train_per_class_svm(latents, ys, preds, balanced=True, split_and_search=False, cv=2):
     # if split_and_search is true, split our dataset into 50% svm train, 50% svm test
@@ -292,7 +311,29 @@ def train_per_class_svm(latents, ys, preds, balanced=True, split_and_search=Fals
             clfs.append(clf)
     return clfs, cv_scores
 
-def predict_per_class_svm(latents, ys, clfs, preds=None, aux_info={}, verbose=True, compute_metrics=True):
+def train_per_class_mlp(latents, ys, preds, balanced=True, split_and_search=False, cv=2, hidden_layer_size=100, svm_args={}):
+    # if split_and_search is true, split our dataset into 50% svm train, 50% svm test
+    # Then grid search over C = array([1.e-06, 1.e-05, 1.e-04, 1.e-03, 1.e-02, 1.e-01, 1.e+00])
+    nc = ys.max() + 1
+    #class_weight = 'balanced' if balanced else None        
+    val_correct = (preds == ys).astype(int)
+    val_latent = latents
+    clfs, cv_scores = [], []
+    for c in tqdm(range(nc)):
+        mask = ys == c
+        x, gt = val_latent[mask], val_correct[mask]
+        clf, cv_score = fit_svc_mlp(x=x, gt=gt, svm_args=svm_args) 
+        clfs.append(clf)
+    return clfs, cv_scores
+
+def train_per_class_model(latents, ys, preds, balanced=True, split_and_search=False, cv=2, method='SVM', svm_args={}):
+    if method == 'SVM':
+        clfs, cv_scores = train_per_class_svm(latents=latents, ys=ys, preds=preds, balanced=balanced, split_and_search=split_and_search, cv=cv)
+    else:
+        clfs, cv_scores = train_per_class_mlp(latents=latents, ys=ys, preds=preds, balanced=balanced, split_and_search=split_and_search, cv=cv, svm_args=svm_args)
+    return clfs, cv_scores
+
+def predict_per_class_svm(latents, ys, clfs, preds=None, aux_info={}, verbose=True, compute_metrics=True, method='SVM'):
     N = len(ys)
     out_mask, out_decision = np.zeros(N), np.zeros(N)
     skipped_classes = []
@@ -306,7 +347,10 @@ def predict_per_class_svm(latents, ys, clfs, preds=None, aux_info={}, verbose=Tr
         mask = ys == c
         if clfs[c] is not None and (len(mask[mask]) > 0):
             clf_out = clfs[c].predict(latents[mask])
-            decision_out = clfs[c].decision_function(latents[mask])
+            if method == 'SVM':
+                decision_out = clfs[c].decision_function(latents[mask])
+            else:
+                decision_out = clfs[c].predict_proba(latents[mask])[:,0]
             if compute_metrics:
                 indiv_metrics.append({
                     'accuracy': get_accuracy(ytrue=ytrue[mask], ypred=clf_out),
@@ -327,7 +371,7 @@ def predict_per_class_svm(latents, ys, clfs, preds=None, aux_info={}, verbose=Tr
             'ytrue': ytrue,
             'ypred': ypred,
             'decision_values': out_decision,
-            'classes': out_dict['ys'],
+            'classes': ys,
             'skipped_classes': skipped_classes,
             **aux_info
         }
@@ -336,3 +380,7 @@ def predict_per_class_svm(latents, ys, clfs, preds=None, aux_info={}, verbose=Tr
         return out_mask, out_decision, metric_dict
     else:
         return out_mask, out_decision
+
+
+def predict_per_class_model(latents, ys, clfs, preds=None, aux_info={}, verbose=True, compute_metrics=True, method='SVM'):
+    return predict_per_class_svm(latents=latents, ys=ys, clfs=clfs, preds=preds, aux_info=aux_info, verbose=verbose, compute_metrics=compute_metrics, method=method)
