@@ -18,6 +18,7 @@ from failure_directions.src.config_parsing import ffcv_read_check_override_confi
 from failure_directions.src.label_maps import CLASS_DICT
 import failure_directions.src.model_utils as model_utils
 import failure_directions.src.svm_utils as svm_utils
+import failure_directions.src.clip_utils as clip_utils
 from failure_directions.src.ffcv_utils import get_training_loaders
 from failure_directions.src.wrappers import SVMFitter, CLIPProcessor
 
@@ -200,18 +201,19 @@ class SVMProcessor:
                     self._display_images(taken_index=ind, taken_scores=dv_val, taken_confs=confs_val, split=split, rows=rows, columns=columns, filename=fname)
                     
 class ClipAnalyzer:
-    def __init__(self, processor, svm_model_name, caption_set_name, skip_captions=False, legacy_load=True,
+    def __init__(self, processor, svm_model_name, caption_set_name, class_names, skip_captions=False, legacy_load=True,
                 ):
         self.processor = processor
+        self.svm_fitter = SVMFitter()
         if legacy_load:
-            self.svm_fitter = SVMFitter().legacy_import_model(svm_model_name, svm_stats=processor.metrics['stats'])
+            self.svm_fitter.legacy_import_model(svm_model_name, svm_stats=processor.metrics['stats'])
         else:
-            self.svm_fitter = SVMFitter().import_model(svm_filename)
+            self.svm_fitter.import_model(svm_filename)
         self.clip_processor = CLIPProcessor(ds_mean=processor.hparams['mean'], 
                                             ds_std=processor.hparams['std'], 
                                             arch='ViT-B/32', device='cuda')
         self.clip_features = {
-            split: clip_processor.evaluate_clip_images(loader) for split, loader in processor.loaders.items()}
+            split: self.clip_processor.evaluate_clip_images(loader) for split, loader in processor.loaders.items()}
         
         self.test_class = processor.metrics[f'test_metrics']['classes']
         # sanity check loading svm
@@ -221,23 +223,25 @@ class ClipAnalyzer:
         ypred_ = processor.metrics[f'test_metrics']['ypred'][mask_]
         print(
             "consistent with old results",
-            (self.svm_fitter.predict(ys=ys_, latents=lats_) == ypred_).mean()
+            (self.svm_fitter.predict(ys=ys_, latents=lat_, compute_metrics=False)[0].astype(int) == ypred_).mean()
         )
         if not skip_captions:
-            self.captions = clip_utils.get_captions(caption_set_name)
+            self.captions = clip_utils.get_caption_set(caption_set_name)
+        self.class_names = class_names
         
     def get_svm_style_top_K(self, target_c, caption_type='all', K=10):
-        captions = self.captions[target_c][caption_type]
+        target_c_name = self.class_names[target_c]
+        captions = self.captions[target_c_name][caption_type]
         values, caption_latents = self.clip_processor.get_caption_scores(captions=captions, 
                                                reference_caption=self.captions['reference'][target_c],
                                                svm_fitter=self.svm_fitter,
                                                target_c=target_c)
         order = np.argsort(values) # lowest first
-        neg_captions = captions[order][:K]
+        neg_captions = np.array(captions)[order][:K]
         neg_vals = values[order][:K]
         neg_latents = caption_latents.numpy()[order][:K]
         order = order[::-1]
-        pos_captions = captions[order][:K]
+        pos_captions = np.array(captions)[order][:K]
         pos_vals = values[order][:K]
         pos_latents = caption_latents.numpy()[order][:K]
         result = {
