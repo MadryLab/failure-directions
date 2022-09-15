@@ -307,3 +307,21 @@ def get_caption_set(caption_set_name):
     else:
         assert False, "caption_set not found"
     
+def normalize_embeddings(a):
+    return a/torch.linalg.norm(a, dim=1, keepdims=True)
+
+def cosine_distance(a, b):
+    a_norm = normalize_embeddings(a)
+    b_norm = normalize_embeddings(b)
+    return a_norm @ b_norm.T
+
+def order_descriptions_l2(clip_data, text_data):
+    clip_mean = clip_data.mean(dim=0).unsqueeze(0)
+    l2 = torch.linalg.norm(clip_mean - text_data, dim=1).cpu().numpy()
+    return l2
+
+
+def order_descriptions_angle(mean_point, query_points):
+    clip_mean = mean_point.mean(dim=0).unsqueeze(0)
+    out = cosine_distance(clip_mean, query_points).squeeze(0).cpu().numpy()
+    return out
