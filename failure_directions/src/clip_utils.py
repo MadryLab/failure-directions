@@ -115,6 +115,23 @@ CIFAR_CLIP_CONFIG = {
     'adjectives': ADJECTIVES,
 }
 
+CIFAR_SIMPLE_CONFIG = {
+    'nouns': {
+        'dog':['dog'],
+        'bird': ['bird'],
+        'automobile': ['automobile'],
+        'airplane': ['airplane'],
+        'truck': ['truck'],
+        'ship': ['ship'],
+        'frog': ['frog'],
+        'cat': ['cat'],
+        'horse': ['horse'],
+        'deer':['deer'],
+    },
+    'adjectives': CIFAR_CLIP_CONFIG['adjectives'],
+    'prepositions': CIFAR_CLIP_CONFIG['prepositions'],
+}
+
 CIFAR100_CLIP_CONFIG = {
     'nouns': {
             'aquatic mammal':	['beaver', 'dolphin', 'otter', 'seal', 'whale'],
@@ -141,8 +158,6 @@ CIFAR100_CLIP_CONFIG = {
     'prepositions': [None],
     'adjectives': [None],
 }
-
-
 
 CELEBA_CONFIG = {
     'nouns': {
@@ -187,6 +202,7 @@ CONFIG_MAPPING = {
     'CELEBA': CELEBA_CONFIG,
     'IMAGENET': IMAGENET_CLIP_CONFIG,
     'CIFAR100': CIFAR100_CLIP_CONFIG,
+    'CIFAR10SIMPLE': CIFAR_SIMPLE_CONFIG,
 }
 
 
@@ -286,12 +302,15 @@ class CaptionGenerator:
         return caption_maps
     
 def get_caption_set(caption_set_name):
-    assert caption_set_name in ['IMAGENET', "CIFAR", 'CELEBA']
+    assert caption_set_name in ['IMAGENET', "CIFAR", 'CELEBA', 'CIFAR100', 'CIFARSIMPLE']
     if caption_set_name == 'CELEBA':
         return CaptionGenerator(label_list=['person', 'person'], clip_config=CONFIG_MAPPING['CELEBA']).get_captions()
     elif caption_set_name == 'CIFAR':
         cifar_label_list = np.array([CLASS_DICT['CIFAR'][u] for u in range(10)])
         return CaptionGenerator(label_list=cifar_label_list, clip_config=CONFIG_MAPPING['CIFAR10']).get_captions()
+    elif caption_set_name == 'CIFARSIMPLE':
+        cifar_label_list = np.array([CLASS_DICT['CIFAR'][u] for u in range(10)])
+        return CaptionGenerator(label_list=cifar_label_list, clip_config=CONFIG_MAPPING['CIFAR10SIMPLE']).get_captions()
     elif caption_set_name == 'CIFAR100':
         singular_class_names = ['aquatic mammal', 'fish', 'flower', 'food container', 
                                 'fruit or vegetable', 'household electrical device', 

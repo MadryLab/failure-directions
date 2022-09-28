@@ -59,13 +59,13 @@ class SVMPreProcessing(nn.Module):
         return {
             'mean': self.mean,
             'std': self.std,
-            'normalize': self.normalize
+            'normalize': self.do_normalize
         }
     
     def _import(self, args):
         self.mean = args['mean']
         self.std = args['std']
-        self.normalize = args['normalize']
+        self.do_normalize = args['normalize']
             
     
 

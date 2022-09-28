@@ -32,7 +32,9 @@ def convert_to_numpy(d):
 class SVMProcessor:
     def __init__(self, svm_filename, root="/mnt/cfs/projects/correlated_errors/betons", get_unlabeled=False,
                  checkpoint_path=None, set_device=False, spurious=False, save_pred_probs=False,
+                 batch_size=100
                 ):
+        self.batch_size = batch_size
         self.get_unlabeled = get_unlabeled
         self.svm_filename = svm_filename
         self.metrics = self._load_svm_result(svm_filename)
@@ -80,7 +82,7 @@ class SVMProcessor:
         with open(config, 'r') as file:
             hparams = yaml.safe_load(file)
         hparams = ffcv_read_check_override_config(hparams)
-        hparams['batch_size'] = 100
+        hparams['batch_size'] = self.batch_size
         hparams['drop_last'] = False
         hparams['shuffle'] = False
         hparams['os_cache'] = False
