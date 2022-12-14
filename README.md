@@ -6,7 +6,10 @@ Here we provide the code for our paper: **[Distilling Model Failures as Directio
 </p>
 
 ## Getting Started
-* **pip** package coming soon! stay tuned
+Install using pip, or clone our repository.
+```
+pip install failure-directions
+```
  
 **Example:** For a walkthrough of using our method [Example notebook](https://github.com/MadryLab/failure-directions/blob/release/example/Example.ipynb)! This notebook walks through using our method on CIFAR-10.
 
@@ -17,7 +20,7 @@ SVMFitter: utility wrapper to fit the SVM
 CLIPProcessor: utility wrapper for CLIP operations
 ```
 
-In order to fit the SVM and extract the corresponding direction, run (assuming `hparams` contains the mean and std) for the dataset:
+**Basic Usage** In order to fit the SVM and extract the corresponding direction, run (assuming `hparams` contains the mean and std) for the dataset:
 ```
 import failure_directions
 # let hparams contain mean and std for dataset
