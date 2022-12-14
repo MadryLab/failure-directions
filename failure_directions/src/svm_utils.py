@@ -35,20 +35,24 @@ class SVMPreProcessing(nn.Module):
         self.do_normalize = do_normalize
         
     def update_stats(self, latents):
-        latents = torch.tensor(latents)
+        if not torch.is_tensor(latents):
+            latents = torch.tensor(latents)
         self.mean = latents.mean(dim=0)
         self.std = (latents - self.mean).std(dim=0)
     
     def normalize(self, latents):
-        latents = torch.tensor(latents)
+        if not torch.is_tensor(latents):
+            latents = torch.tensor(latents)
         return latents/torch.linalg.norm(latents, dim=1, keepdims=True)
     
     def whiten(self, latents):
-        latents = torch.tensor(latents)
+        if not torch.is_tensor(latents):
+            latents = torch.tensor(latents)
         return (latents - self.mean) / self.std
     
     def forward(self, latents):
-        latents = torch.tensor(latents)
+        if not torch.is_tensor(latents):
+            latents = torch.tensor(latents)
         if self.mean is not None:
             latents = self.whiten(latents)
         if self.do_normalize:
