@@ -25,7 +25,7 @@ ANCESTOR_TO_PREPS = [
     [['reptile', 'amphibian'], [ 'in a tank', 'on the ground', 'on a rock', 'in the grass']],
     [['marsupial', 'swine', 'bovid', 'feline', 'canine', 'rodent'], [ 'in the grass', 'in a house', 'in the forest', 'on the ground', 'with a person']],
     [['fungus'], [ 'on the ground', 'in the grass']],
-    [['food'], [ 'on a plate', 'one the ground', 'on a table', 'with a person']],
+    [['food'], [ 'on a plate', 'on the ground', 'on a table', 'with a person']],
     [['geological_formation', 'train', 'mammal', 'structure', 'entity'], [ ]],
     [['wheeled_vehicle', 'bus', 'vehicle'], [ 'on the road', 'parked']],
     [['fruit', 'fruit', 'flower'], [ 'on a table', 'on the ground', 'on a tree', 'with a person', 'in the grass']],
@@ -75,8 +75,8 @@ def get_imagenet_config():
                 ancestor = a
                 break
         assert ancestor is not None
-        nouns[imagenet_label_list[i]] = [imagenet_label_list[i]]
-#         nouns[imagenet_label_list[i]] = [' '.join(ancestor.split('_'))]
+#         nouns[imagenet_label_list[i]] = [imagenet_label_list[i]]
+        nouns[imagenet_label_list[i]] = [' '.join(ancestor.split('_'))]
         prepositions[imagenet_label_list[i]] = BACKGROUNDS + ancestor_preps[ancestor]
     return {
         'adjectives': ADJECTIVES + DESCRIPTORS,
@@ -159,6 +159,19 @@ CIFAR100_CLIP_CONFIG = {
     'adjectives': [None],
 }
 
+
+CHESTXRAY_CONFIG = {
+    'nouns': {
+        "x-ray": ["x-ray"],
+    },
+    'adjectives': [None, "blurry", "close-up", "light", "dark"],
+    'prepositions': [
+        "facing forward",
+        "facing sideways",
+        "cropped",
+    ]
+}
+
 CELEBA_CONFIG = {
     'nouns': {
         "person": ["person", "man", "woman"],
@@ -203,6 +216,7 @@ CONFIG_MAPPING = {
     'IMAGENET': IMAGENET_CLIP_CONFIG,
     'CIFAR100': CIFAR100_CLIP_CONFIG,
     'CIFAR10SIMPLE': CIFAR_SIMPLE_CONFIG,
+    'CHESTXRAY': CHESTXRAY_CONFIG,
 }
 
 
@@ -302,9 +316,11 @@ class CaptionGenerator:
         return caption_maps
     
 def get_caption_set(caption_set_name):
-    assert caption_set_name in ['IMAGENET', "CIFAR", 'CELEBA', 'CIFAR100', 'CIFARSIMPLE']
+    assert caption_set_name in ['IMAGENET', "CIFAR", 'CELEBA', 'CIFAR100', 'CIFARSIMPLE', 'CHESTXRAY']
     if caption_set_name == 'CELEBA':
         return CaptionGenerator(label_list=['person', 'person'], clip_config=CONFIG_MAPPING['CELEBA']).get_captions()
+    if caption_set_name == 'CHESTXRAY':
+        return CaptionGenerator(label_list=['x-ray', 'x-ray'], clip_config=CONFIG_MAPPING['CHESTXRAY']).get_captions()
     elif caption_set_name == 'CIFAR':
         cifar_label_list = np.array([CLASS_DICT['CIFAR'][u] for u in range(10)])
         return CaptionGenerator(label_list=cifar_label_list, clip_config=CONFIG_MAPPING['CIFAR10']).get_captions()

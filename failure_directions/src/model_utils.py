@@ -4,7 +4,7 @@ sys.path.append("..")
 import failure_directions.src.cifar_resnet as cifar_resnet
 import torchvision.models as models
 import torch.nn as nn
-
+import timm
 
 def save_model(model, path, run_metadata):
     torch.save({
@@ -57,12 +57,16 @@ def get_pretrained_resnet(arch, num_classes):
     return get_resnet(arch, num_classes, pretrained=True)
 
 def get_other(arch, num_classes):
-    import src.other_archs as other_archs
+    #import src.other_archs as other_archs
 
     if arch == 'alexnet':
         return torch.hub.load('pytorch/vision:v0.10.0','alexnet',pretrained=False)
     elif arch == 'vgg16':
         return other_archs.vgg16
+    elif arch=='vit-t':
+        model =  timm.create_model("vit_tiny_patch16_224", num_classes=num_classes)
+        model._build_params = {'arch': arch, 'num_classes': num_classes}
+        return model
     return None
 
 

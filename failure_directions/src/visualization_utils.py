@@ -210,7 +210,7 @@ class ClipAnalyzer:
         if legacy_load:
             self.svm_fitter.legacy_import_model(svm_model_name, svm_stats=processor.metrics['stats'])
         else:
-            self.svm_fitter.import_model(svm_filename)
+            self.svm_fitter.import_model(svm_model_name)
         self.clip_processor = CLIPProcessor(ds_mean=processor.hparams['mean'], 
                                             ds_std=processor.hparams['std'], 
                                             arch='ViT-B/32', device='cuda')

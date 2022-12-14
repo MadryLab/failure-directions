@@ -153,9 +153,9 @@ if __name__ == "__main__":
             if k  in ds:
                 aux_info[k] = ds[k]
         #aux_info = {ds[k] for k in potential_keys if k in ds} # causing an error
-        errors, decision, metric = svm_fitter.predict(latents=val_out['latents'], 
-                                            ys=val_out['ys'],
-                                            preds=val_out['preds'], 
+        errors, decision, metric = svm_fitter.predict(latents=ds['latents'], 
+                                            ys=ds['ys'],
+                                            preds=ds['preds'], 
                                             aux_info=aux_info,
                                             compute_metrics=True,
                                             verbose=True,
