@@ -13,7 +13,7 @@ import failure_directions.src.svm_utils as svm_utils
 from failure_directions.src.label_maps import CLASS_DICT
 import importlib.resources
 import json
-
+from failure_directions.src.imagenet_class_index import IN_CLASS_MAPPING
 
 
 ADJECTIVES =  [None, 'white', 'blue', 'red', 'green', 'black', 'yellow', 'orange', 'brown']
@@ -41,8 +41,7 @@ ANCESTOR_TO_PREPS = [
 ]
 
 def get_imagenet_config():
-    with importlib.resources.open_text("failure_directions.src", 'imagenet_class_index.json') as file:
-        class_indices = json.load(file)  
+    class_indices = IN_CLASS_MAPPING
 #     with open('src/imagenet_class_index.json', 'r') as f:
 #         class_indices = json.load(f)
     synsets = {}

@@ -1,6 +1,5 @@
 import torch
 import sys
-sys.path.append("..")
 import failure_directions.src.cifar_resnet as cifar_resnet
 import torchvision.models as models
 import torch.nn as nn
